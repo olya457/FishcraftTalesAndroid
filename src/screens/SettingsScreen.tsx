@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Linking,
   Switch,
   Modal,
   Animated,
@@ -36,10 +35,7 @@ const SettingsScreen = () => {
     })
   ).current;
 
-  
-
   useEffect(() => {
-   
     bubbleAnims.forEach((bubble) => {
       const animate = () => {
         bubble.y.setValue(height + Math.random() * 100);
@@ -82,10 +78,7 @@ const SettingsScreen = () => {
         }),
       ])
     ).start();
-
-    
-
-  }, []); 
+  }, []);
 
   const resetAllData = async () => {
     try {
@@ -104,7 +97,6 @@ const SettingsScreen = () => {
       style={[styles.background, { transform: [{ scale: backgroundScale }] }]}
       resizeMode="cover"
     >
-      {}
       <View style={StyleSheet.absoluteFill}>
         {bubbleAnims.map((bubble, i) => (
           <Animated.Image
@@ -124,19 +116,9 @@ const SettingsScreen = () => {
         ))}
       </View>
 
-      {}
-      {}
-
-      {}
       <View style={styles.container}>
-        {}
-        <Text
-          style={styles.title}
-        >
-          Settings
-        </Text>
+        <Text style={styles.title}>Settings</Text>
 
-        {}
         <View>
           <View style={styles.row}>
             <Text style={styles.label}>Notifications</Text>
@@ -151,17 +133,9 @@ const SettingsScreen = () => {
           <Pressable style={styles.button} onPress={() => setModalVisible(true)}>
             <Text style={styles.buttonText}>Clear journal</Text>
           </Pressable>
-
-          <Pressable
-            style={styles.button}
-            onPress={() => Linking.openURL('https://www.example.com/privacy-policy')}
-          >
-            <Text style={styles.buttonText}>Privacy policy</Text>
-          </Pressable>
         </View>
       </View>
 
-      {}
       <Modal transparent visible={modalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>

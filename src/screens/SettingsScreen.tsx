@@ -137,7 +137,7 @@ const SettingsScreen = () => {
   };
 
   const openPrivacyPolicy = () => {
-    Linking.openURL('https://www.termsfeed.com/live/c0b3f611-e65a-4264-ba17-94b628ab11ae');
+    Linking.openURL('https://www.termsfeed.com/live/c559f06a-244e-4063-a552-157194ba5333');
   };
 
   return (

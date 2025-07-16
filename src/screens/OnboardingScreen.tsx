@@ -75,7 +75,7 @@ const OnboardingScreen = ({ navigation }: OnboardingScreenProps) => {
   const backgroundScale = useRef(new Animated.Value(1)).current;
 
   const bubbleAnims = useRef(
-    Array.from({ length: 24 }).map(() => {
+    Array.from({ length: 12 }).map(() => {
       const size = 16 + Math.random() * 24; 
       return {
         y: new Animated.Value(height + Math.random() * 100),
@@ -88,7 +88,7 @@ const OnboardingScreen = ({ navigation }: OnboardingScreenProps) => {
   ).current;
 
   const floatingFish = useRef(
-    Array.from({ length: 9 }).map((_, fishIndex) => { 
+    Array.from({ length: 5 }).map((_, fishIndex) => { 
       const sizes = ['small', 'medium', 'large'];
       const types = ['purple', 'blue', 'yellow'];
 

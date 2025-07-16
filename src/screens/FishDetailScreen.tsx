@@ -38,7 +38,7 @@ const FishDetailScreen = () => {
   const backgroundScale = useRef(new Animated.Value(1)).current;
 
   const bubbleAnims = useRef(
-    Array.from({ length: 12 }).map(() => { 
+    Array.from({ length: 12 }).map(() => {
       const size = 16 + Math.random() * 24;
       return {
         y: new Animated.Value(height + Math.random() * 100),
@@ -51,18 +51,18 @@ const FishDetailScreen = () => {
   ).current;
 
   const floatingFish = useRef(
-    Array.from({ length: 5 }).map((_, index) => { 
+    Array.from({ length: 5 }).map((_, index) => {
       const sizes = ['small', 'medium', 'large'];
       const types = ['purple', 'blue', 'yellow'];
 
       const type = types[index % types.length];
 
-      const direction = type === 'yellow' ? 'left' : 'right';
+      const direction = type === 'yellow' ? 'left' : 'right'; 
       const size = sizes[index % sizes.length];
 
-      const startX = direction === 'left' ? width + 100 : -100;
+      const startX = direction === 'left' ? width + 100 : -100; 
       const animatedX = new Animated.Value(startX);
-      const animatedY = new Animated.Value(Math.random() * height);
+      const animatedY = new Animated.Value(Math.random() * height); 
 
       return {
         key: `fish-${index}`,
@@ -105,6 +105,7 @@ const FishDetailScreen = () => {
       ])
     ).start();
 
+  
     Animated.timing(imageAnim, {
       toValue: 1,
       duration: 200,
@@ -131,6 +132,7 @@ const FishDetailScreen = () => {
         useNativeDriver: true,
       }),
     ]).start();
+
 
     const bubbleTimer = setTimeout(() => {
       bubbleAnims.forEach((bubble) => {
@@ -162,11 +164,24 @@ const FishDetailScreen = () => {
       });
     }, 2000);
 
+    floatingFish.forEach(fish => {
+      const animate = () => {
+        const toX = fish.direction === 'left' ? -150 : width + 150; 
+        fish.x.setValue(fish.direction === 'left' ? width + 150 : -150); 
+        fish.y.setValue(Math.random() * height); 
 
+        Animated.timing(fish.x, {
+          toValue: toX,
+          duration: fish.speed,
+          useNativeDriver: true,
+        }).start(() => animate()); 
+      };
+      animate();
+    });
 
     return () => {
       clearTimeout(bubbleTimer);
-      
+     
     };
   }, []);
 
@@ -267,6 +282,39 @@ const FishDetailScreen = () => {
     tip: 'No tips available',
   };
 
+
+  const getFishImage = (type: string, size: string, direction: string) => {
+    switch (type) {
+      case 'purple':
+        return direction === 'left'
+          ? require('../assets/purple_fish.png') 
+          : require('../assets/purple_fish.png'); 
+      case 'blue':
+        return direction === 'left'
+          ? require('../assets/blue_fish.png') 
+          : require('../assets/blue_fish.png'); 
+      case 'yellow':
+        return direction === 'left'
+          ? require('../assets/yellow_fish.png') 
+          : require('../assets/yellow_fish.png'); 
+      default:
+        return require('../assets/blue_fish.png'); 
+    }
+  };
+
+  const getFishStyle = (size: string) => {
+    switch (size) {
+      case 'small':
+        return { width: 50, height: 30 };
+      case 'medium':
+        return { width: 70, height: 40 };
+      case 'large':
+        return { width: 90, height: 50 };
+      default:
+        return { width: 70, height: 40 };
+    }
+  };
+
   return (
     <AnimatedImageBackground
       source={require('../assets/encyclopedia_background.png')}
@@ -291,10 +339,23 @@ const FishDetailScreen = () => {
             resizeMode="contain"
           />
         ))}
-      </View>
 
-      {}
-      {}
+        {}
+        {floatingFish.map((f) => (
+          <Animated.Image
+            key={f.key}
+            source={getFishImage(f.type, f.size, f.direction)}
+            style={[
+              {
+                position: 'absolute',
+                transform: [{ translateX: f.x }, { translateY: f.y }],
+              },
+              getFishStyle(f.size),
+            ]}
+            resizeMode="contain"
+          />
+        ))}
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>

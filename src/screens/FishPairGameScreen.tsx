@@ -26,7 +26,7 @@ interface Card {
   image: any;
   flipped: boolean;
   matched: boolean;
-  elevated?: boolean; 
+  elevated?: boolean;
   animated: Animated.Value;
 }
 
@@ -57,7 +57,7 @@ const createShuffledCards = (): Card[] => {
       flipped: false,
       matched: false,
       animated: new Animated.Value(1),
-      elevated: false, 
+      elevated: false,
     }))
     .sort(() => Math.random() - 0.5);
 };
@@ -75,7 +75,7 @@ const FishPairGameScreen = () => {
   const [gameOver, setGameOver] = useState(false);
   const [showResult, setShowResult] = useState(false);
 
-  const isAnimating = useRef(false); 
+  const isAnimating = useRef(false);
 
   const backgroundScale = useRef(new Animated.Value(1)).current;
 
@@ -107,15 +107,18 @@ const FishPairGameScreen = () => {
         }),
       ])
     ).start();
+  }, [backgroundScale]); 
 
-    const backgroundAnimationTimeout = setTimeout(() => {
+  useEffect(() => {
+    let bubbleAnimationTimeouts: NodeJS.Timeout[] = [];
+    if (!started) {
       bubbleAnims.forEach((bubble) => {
         const animate = () => {
           bubble.y.setValue(height + Math.random() * 100);
           bubble.scale.setValue(0.5);
           bubble.opacity.setValue(0);
 
-          Animated.parallel([
+          const animation = Animated.parallel([
             Animated.timing(bubble.y, {
               toValue: -height - 50,
               duration: 4000 + Math.random() * 2000,
@@ -132,16 +135,32 @@ const FishPairGameScreen = () => {
               duration: 800,
               useNativeDriver: true,
             }),
-          ]).start(() => animate());
+          ]);
+          animation.start(() => animate()); 
         };
         animate();
       });
-    }, 1000);
+    } else {
+     
+      bubbleAnims.forEach(bubble => {
+        bubble.y.stopAnimation();
+        bubble.scale.stopAnimation();
+        bubble.opacity.stopAnimation();
+      
+        bubble.opacity.setValue(0);
+      });
+    }
 
     return () => {
-      clearTimeout(backgroundAnimationTimeout);
+   
+      bubbleAnimationTimeouts.forEach(clearTimeout);
+      bubbleAnims.forEach(bubble => {
+        bubble.y.stopAnimation();
+        bubble.scale.stopAnimation();
+        bubble.opacity.stopAnimation();
+      });
     };
-  }, []);
+  }, [started, bubbleAnims]); 
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -177,14 +196,15 @@ const FishPairGameScreen = () => {
 
   const resetGame = () => {
     setStarted(false);
-    setCards(createShuffledCards());
+   
+    setCards(prevCards => createShuffledCards().map(card => ({...card, animated: new Animated.Value(1)})));
     setSelectedCards([]);
     setPairsFound(0);
     setTimeLeft(60);
     setLatestMatchImage(null);
     setGameOver(false);
     setShowResult(false);
-    isAnimating.current = false; 
+    isAnimating.current = false;
   };
 
   useFocusEffect(
@@ -204,7 +224,7 @@ const FishPairGameScreen = () => {
   };
 
   const handleCardPress = (cardId: string) => {
-    if (gameOver || isAnimating.current) { 
+    if (gameOver || isAnimating.current) {
       return;
     }
 
@@ -233,12 +253,11 @@ const FishPairGameScreen = () => {
       }
 
       if (firstCard.image === secondCard.image) {
-    
-        isAnimating.current = true; 
+        isAnimating.current = true;
 
         const updatedCards = newCards.map(card =>
           card.id === firstId || card.id === secondId
-            ? { ...card, elevated: true } 
+            ? { ...card, elevated: true }
             : card
         );
         setCards(updatedCards);
@@ -246,31 +265,29 @@ const FishPairGameScreen = () => {
         Animated.parallel([
           Animated.timing(firstCard.animated, {
             toValue: 0,
-            duration: 600, 
+            duration: 600,
             useNativeDriver: true,
           }),
           Animated.timing(secondCard.animated, {
             toValue: 0,
+            duration: 600, 
             useNativeDriver: true,
           }),
-        ]).start();
-
-        setTimeout(() => {
+        ]).start(() => {
           setCards(prev =>
             prev.map(card =>
               card.id === firstId || card.id === secondId
-                ? { ...card, matched: true, elevated: false } 
+                ? { ...card, matched: true, elevated: false, flipped: false } 
                 : card
             )
           );
           setPairsFound(prev => prev + 1);
           setLatestMatchImage(firstCard.image);
           setSelectedCards([]);
-          isAnimating.current = false; 
-        }, 2000); 
+          isAnimating.current = false;
+        });
       } else {
-    
-        isAnimating.current = true; 
+        isAnimating.current = true;
         setTimeout(() => {
           setCards(prev =>
             prev.map(card =>
@@ -280,8 +297,8 @@ const FishPairGameScreen = () => {
             )
           );
           setSelectedCards([]);
-          isAnimating.current = false; 
-        }, 500); 
+          isAnimating.current = false;
+        }, 500);
       }
     }
   };
@@ -293,7 +310,7 @@ const FishPairGameScreen = () => {
   };
 
   const handleStart = () => {
-    setCards(createShuffledCards());
+    setCards(createShuffledCards().map(card => ({...card, animated: new Animated.Value(1)}))); 
     setSelectedCards([]);
     setPairsFound(0);
     setTimeLeft(60);
@@ -301,7 +318,7 @@ const FishPairGameScreen = () => {
     setLatestMatchImage(null);
     setGameOver(false);
     setShowResult(false);
-    isAnimating.current = false; 
+    isAnimating.current = false;
   };
 
   const renderFishFact = () => {
@@ -334,34 +351,33 @@ const FishPairGameScreen = () => {
       resizeMode="cover"
     >
       {}
-      <View style={StyleSheet.absoluteFill}>
-        {bubbleAnims.map((bubble, i) => (
-          <Animated.Image
-            key={i}
-            source={require('../assets/bubble.png')}
-            style={[
-              {
-                position: 'absolute',
-                left: bubble.left,
-                width: bubble.baseSize,
-                height: bubble.baseSize,
-                opacity: bubble.opacity,
-                transform: [{ translateY: bubble.y }, { scale: bubble.scale }],
-              },
-            ]}
-            resizeMode="contain"
-          />
-        ))}
-      </View>
+      {!started && (
+        <View style={StyleSheet.absoluteFill}>
+          {bubbleAnims.map((bubble, i) => (
+            <Animated.Image
+              key={i}
+              source={require('../assets/bubble.png')}
+              style={[
+                {
+                  position: 'absolute',
+                  left: bubble.left,
+                  width: bubble.baseSize,
+                  height: bubble.baseSize,
+                  opacity: bubble.opacity,
+                  transform: [{ translateY: bubble.y }, { scale: bubble.scale }],
+                },
+              ]}
+              resizeMode="contain"
+            />
+          ))}
+        </View>
+      )}
 
       <View style={styles.container}>
-
-        {}
         {showResult && (
           <View style={styles.resultScreen}>
             <Text style={styles.resultTitle}>YOU SCORED</Text>
             <Text style={styles.resultScore}>{pairsFound}</Text>
-            {}
             <Text style={styles.resultRecord}>RECORD 6</Text>
 
             <Pressable style={styles.tryAgainButton} onPress={resetGame}>
@@ -370,7 +386,6 @@ const FishPairGameScreen = () => {
           </View>
         )}
 
-        {}
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           {gameOver && !showResult && (
             <View style={styles.gameOverOverlay}>
@@ -379,16 +394,13 @@ const FishPairGameScreen = () => {
           )}
         </View>
 
-        {}
         {!started ? (
           <>
-            {}
             <Image
               source={require('../assets/fish_par.png')}
               style={styles.image}
               resizeMode="contain"
             />
-            {}
             <View style={styles.buttonContainer}>
               <Pressable style={styles.startButton} onPress={handleStart}>
                 <Text style={styles.buttonText}>START</Text>
@@ -397,14 +409,12 @@ const FishPairGameScreen = () => {
           </>
         ) : (
           <>
-            {}
             {!gameOver && !showResult && (
               <View style={styles.timerContainer}>
                 <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
               </View>
             )}
 
-            {}
             {!gameOver && !showResult && (
               <LinearGradient
                 colors={['#1E1E1E', '#FF0000']}
@@ -419,7 +429,7 @@ const FishPairGameScreen = () => {
                       onPress={() => handleCardPress(card.id)}
                       style={[
                         styles.card,
-                        { zIndex: card.elevated ? 2 : 1 }, 
+                        { zIndex: card.elevated ? 2 : 1 },
                       ]}
                       disabled={card.matched || selectedCards.length === 2 || isAnimating.current}
                     >
@@ -445,10 +455,8 @@ const FishPairGameScreen = () => {
               </LinearGradient>
             )}
 
-            {}
             {!gameOver && !showResult && renderFishFact()}
 
-            {}
             {!gameOver && !showResult && (
                 <View style={styles.scoreRow}>
                 <Image

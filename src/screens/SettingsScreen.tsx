@@ -9,11 +9,12 @@ import {
   Animated,
   Dimensions,
   ImageBackground,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
-
 const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
 
 const SettingsScreen = () => {
@@ -23,7 +24,7 @@ const SettingsScreen = () => {
   const backgroundScale = useRef(new Animated.Value(1)).current;
 
   const bubbleAnims = useRef(
-    Array.from({ length: 12 }).map(() => {
+    Array.from({ length: 10 }).map(() => {
       const size = 16 + Math.random() * 24;
       return {
         y: new Animated.Value(height + Math.random() * 100),
@@ -35,7 +36,47 @@ const SettingsScreen = () => {
     })
   ).current;
 
+  const floatingFish = useRef(
+    Array.from({ length: 5 }).map((_, fishIndex) => {
+      const sizes = ['small', 'medium', 'large'];
+      const types = ['purple', 'blue', 'yellow'];
+
+      const type = types[fishIndex % types.length];
+      const direction = type === 'yellow' ? 'left' : 'right';
+      const size = sizes[fishIndex % sizes.length];
+
+      const startX = direction === 'left' ? width + 100 : -100;
+      const animatedX = new Animated.Value(startX);
+      const animatedY = new Animated.Value(Math.random() * height);
+
+      return {
+        key: `fish-${fishIndex}`,
+        type,
+        direction,
+        size,
+        x: animatedX,
+        y: animatedY,
+        speed: type === 'yellow' ? 6000 + Math.random() * 2000 : 8000 + Math.random() * 4000,
+      };
+    })
+  ).current;
+
   useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(backgroundScale, {
+          toValue: 1.03,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backgroundScale, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
     bubbleAnims.forEach((bubble) => {
       const animate = () => {
         bubble.y.setValue(height + Math.random() * 100);
@@ -63,22 +104,26 @@ const SettingsScreen = () => {
       };
       animate();
     });
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(backgroundScale, {
-          toValue: 1.03,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backgroundScale, {
-          toValue: 1,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      floatingFish.forEach(fish => {
+        const animate = () => {
+          const toX = fish.direction === 'left' ? -150 : width + 150;
+          fish.x.setValue(fish.direction === 'left' ? width + 150 : -150);
+          fish.y.setValue(Math.random() * height);
+
+          Animated.timing(fish.x, {
+            toValue: toX,
+            duration: fish.speed,
+            useNativeDriver: true,
+          }).start(() => animate());
+        };
+        animate();
+      });
+    }, [])
+  );
 
   const resetAllData = async () => {
     try {
@@ -89,6 +134,10 @@ const SettingsScreen = () => {
     } finally {
       setModalVisible(false);
     }
+  };
+
+  const openPrivacyPolicy = () => {
+    Linking.openURL('https://www.termsfeed.com/live/c0b3f611-e65a-4264-ba17-94b628ab11ae');
   };
 
   return (
@@ -116,6 +165,35 @@ const SettingsScreen = () => {
         ))}
       </View>
 
+      <View style={StyleSheet.absoluteFill}>
+        {floatingFish.map((fish, i) => {
+          const source =
+            fish.type === 'purple'
+              ? require('../assets/purple_fish.png')
+              : fish.type === 'blue'
+              ? require('../assets/blue_fish.png')
+              : require('../assets/yellow_fish.png');
+
+          const scaleSize =
+            fish.size === 'small' ? 0.5 : fish.size === 'medium' ? 0.8 : 1.1;
+
+          return (
+            <Animated.Image
+              key={fish.key}
+              source={source}
+              style={{
+                position: 'absolute',
+                width: 100 * scaleSize,
+                height: 60 * scaleSize,
+                transform: [{ translateX: fish.x }, { translateY: fish.y }],
+                opacity: 0.6,
+              }}
+              resizeMode="contain"
+            />
+          );
+        })}
+      </View>
+
       <View style={styles.container}>
         <Text style={styles.title}>Settings</Text>
 
@@ -132,6 +210,10 @@ const SettingsScreen = () => {
 
           <Pressable style={styles.button} onPress={() => setModalVisible(true)}>
             <Text style={styles.buttonText}>Clear journal</Text>
+          </Pressable>
+
+          <Pressable style={styles.button} onPress={openPrivacyPolicy}>
+            <Text style={styles.buttonText}>Privacy Policy</Text>
           </Pressable>
         </View>
       </View>

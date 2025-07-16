@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native'; 
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,7 +26,7 @@ type Tip = {
   season: string;
   water: string;
   text: string;
-  avatar: any; 
+  avatar: any;
 };
 
 const allTips: Tip[] = [
@@ -125,7 +125,7 @@ const FisherTipsScreen = () => {
   const backgroundScale = useRef(new Animated.Value(1)).current;
 
   const bubbleAnims = useRef(
-    Array.from({ length: 12 }).map(() => {
+    Array.from({ length: 10 }).map(() => {
       const size = 16 + Math.random() * 24;
       return {
         y: new Animated.Value(height + Math.random() * 100),
@@ -137,68 +137,36 @@ const FisherTipsScreen = () => {
     })
   ).current;
 
-  type Fish = {
-    key: string;
-    type: 'purple' | 'blue' | 'yellow';
-    direction: 'left' | 'right';
-    size: 'small' | 'medium' | 'large';
-    x: Animated.Value;
-    y: Animated.Value;
-    speed: number;
-  };
+ 
+  useFocusEffect(
+    useCallback(() => {
+      console.log('FisherTipsScreen focused');
 
-  const floatingFish = useRef<Fish[]>(
-    Array.from({ length: 5 }).map((_, index) => {
-      const sizes = ['small', 'medium', 'large'] as const;
-      const types = ['purple', 'blue', 'yellow'] as const;
-
-      const type = types[index % types.length];
-
-      const direction = type === 'yellow' ? 'left' : 'right';
-      const size = sizes[index % sizes.length];
-
-      const startX = direction === 'left' ? width + 100 : -100;
-      const animatedX = new Animated.Value(startX);
-      const animatedY = new Animated.Value(Math.random() * height);
-
-      return {
-        key: `fish-${index}`,
-        type,
-        direction,
-        size,
-        x: animatedX,
-        y: animatedY,
-        speed: type === 'yellow' ? 6000 + Math.random() * 2000 : 8000 + Math.random() * 4000,
-      };
-    })
-  ).current;
-
-  useEffect(() => {
    
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(backgroundScale, {
-          toValue: 1.03,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backgroundScale, {
-          toValue: 1,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+      const backgroundLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(backgroundScale, {
+            toValue: 1.03,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(backgroundScale, {
+            toValue: 1,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      backgroundLoop.start();
 
-    const animationTimeout = setTimeout(() => {
-   
-      bubbleAnims.forEach((bubble) => {
-        const animate = () => {
+      const bubbleAnimationLoops = bubbleAnims.map((bubble) => {
+        const animateBubble = () => {
+      
           bubble.y.setValue(height + Math.random() * 100);
           bubble.scale.setValue(0.5);
           bubble.opacity.setValue(0);
 
-          Animated.parallel([
+          return Animated.parallel([
             Animated.timing(bubble.y, {
               toValue: -bubble.baseSize - 50,
               duration: 4000 + Math.random() * 2000,
@@ -215,18 +183,23 @@ const FisherTipsScreen = () => {
               duration: 800,
               useNativeDriver: true,
             }),
-          ]).start(() => animate());
+          ]);
         };
-        animate();
+        const loopBubble = Animated.loop(animateBubble());
+        loopBubble.start();
+        return loopBubble; 
       });
 
- 
-    }, 1000); 
+      return () => {
+        console.log('FisherTipsScreen unfocused');
+       
+        backgroundLoop.stop();
+        backgroundLoop.reset(); 
 
-    return () => {
-      clearTimeout(animationTimeout);
-    };
-  }, []); 
+        bubbleAnimationLoops.forEach(loop => loop.stop());
+      };
+    }, [backgroundScale, bubbleAnims]) 
+  );
 
   const openModal = (type: 'weather' | 'season' | 'water') => {
     setActiveFilter(type);
@@ -254,9 +227,9 @@ const FisherTipsScreen = () => {
   };
 
   const filteredTips = allTips.filter(tip =>
-    (selectedWeather === 'All' || tip.weather === selectedWeather) &&
-    (selectedSeason === 'All' || tip.season === selectedSeason) &&
-    (selectedWater === 'All' || tip.water === selectedWater)
+    (selectedWeather === 'All' || tip.weather === selectedWeather || tip.weather === 'Any') &&
+    (selectedSeason === 'All' || tip.season === selectedSeason || tip.season === 'Any') &&
+    (selectedWater === 'All' || tip.water === selectedWater || tip.water === 'Any')
   );
 
   return (
@@ -266,10 +239,11 @@ const FisherTipsScreen = () => {
       resizeMode="cover"
     >
       {}
-      <View style={StyleSheet.absoluteFill}>
+      {}
+      <View style={{ ...StyleSheet.absoluteFillObject, pointerEvents: 'none' }}>
         {bubbleAnims.map((bubble, i) => (
           <Animated.Image
-            key={i}
+            key={`bubble-${i}`}
             source={require('../assets/bubble.png')}
             style={[
               {
@@ -286,14 +260,13 @@ const FisherTipsScreen = () => {
         ))}
       </View>
 
-      {}
-      {}
-
       <ScrollView contentContainerStyle={styles.container}>
         {}
-        <Text style={styles.title}>
-          Tips from{'\n'} fishermen
-        </Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>
+            Advice from{'\n'} fishermen
+          </Text>
+        </View>
 
         {}
         <View style={styles.filtersRow}>
@@ -308,21 +281,24 @@ const FisherTipsScreen = () => {
           </Pressable>
         </View>
 
-        {/* List of Tips */}
-        {filteredTips.length === 0 ? (
-          <Text style={styles.noTipsText}>No tips found.</Text>
-        ) : (
-          filteredTips.map(tip => (
-            <View key={tip.id} style={styles.tipCard}>
-              <Image source={tip.avatar} style={styles.avatar} />
-              <View style={styles.tipBubble}>
-                <Text style={styles.tipText}>{tip.text}</Text>
+        {}
+        <View style={styles.tipsListContainer}>
+          {filteredTips.length === 0 ? (
+            <Text style={styles.noTipsText}>No results were found based on the selected criteria.</Text>
+          ) : (
+            filteredTips.map(tip => (
+              <View key={tip.id} style={styles.tipCard}>
+                <Image source={tip.avatar} style={styles.avatar} />
+                <View style={styles.tipBubble}>
+                  <Text style={styles.tipText}>{tip.text}</Text>
+                </View>
               </View>
-            </View>
-          ))
-        )}
+            ))
+          )}
+        </View>
       </ScrollView>
 
+      {}
       <Modal visible={modalVisible} transparent animationType="fade">
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
           <View style={styles.modalContent}>
@@ -366,6 +342,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
   },
+  titleContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 32,
     color: 'white',
@@ -392,6 +372,9 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  tipsListContainer: {
+    width: '100%',
   },
   tipCard: {
     flexDirection: 'row',

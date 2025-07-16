@@ -58,7 +58,7 @@ const FishingJournalScreen = () => {
   const backgroundScale = useRef(new Animated.Value(1)).current;
 
   const bubbleAnims = useRef(
-    Array.from({ length: 12 }).map(() => {
+    Array.from({ length: 10 }).map(() => {
       const size = 16 + Math.random() * 24;
       return {
         y: new Animated.Value(height + Math.random() * 100),
@@ -96,12 +96,9 @@ const FishingJournalScreen = () => {
     })
   ).current;
 
-  useEffect(() => {
-    const fetchEntries = async () => {
-      await loadEntries();
-    };
-    fetchEntries();
+  const bubblesAndFishStarted = useRef(false);
 
+  useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(backgroundScale, {
@@ -116,42 +113,60 @@ const FishingJournalScreen = () => {
         }),
       ])
     ).start();
-
-    bubbleAnims.forEach((bubble) => {
-      const animate = () => {
-        bubble.y.setValue(height + Math.random() * 100);
-        bubble.scale.setValue(0.5);
-        bubble.opacity.setValue(0);
-
-        Animated.parallel([
-          Animated.timing(bubble.y, {
-            toValue: -height - 50,
-            duration: 4000 + Math.random() * 2000,
-            delay: Math.random() * 3000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(bubble.scale, {
-            toValue: 1.4,
-            duration: 4000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(bubble.opacity, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]).start(() => animate());
-      };
-      animate();
-    });
-
-    
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
       loadEntries();
-      return () => {};
+
+      if (!bubblesAndFishStarted.current) {
+        bubbleAnims.forEach((bubble) => {
+          const animate = () => {
+            bubble.y.setValue(height + Math.random() * 100);
+            bubble.scale.setValue(0.5);
+            bubble.opacity.setValue(0);
+
+            Animated.parallel([
+              Animated.timing(bubble.y, {
+                toValue: -height - 50,
+                duration: 4000 + Math.random() * 2000,
+                delay: Math.random() * 3000,
+                useNativeDriver: true,
+              }),
+              Animated.timing(bubble.scale, {
+                toValue: 1.4,
+                duration: 4000,
+                useNativeDriver: true,
+              }),
+              Animated.timing(bubble.opacity, {
+                toValue: 1,
+                duration: 800,
+                useNativeDriver: true,
+              }),
+            ]).start(() => animate());
+          };
+          animate();
+        });
+
+        floatingFish.forEach((fish) => {
+          const animate = () => {
+            const toX = fish.direction === 'left' ? -150 : width + 150;
+            fish.x.setValue(fish.direction === 'left' ? width + 150 : -150);
+            fish.y.setValue(Math.random() * height);
+
+            Animated.timing(fish.x, {
+              toValue: toX,
+              duration: fish.speed,
+              useNativeDriver: true,
+            }).start(() => animate());
+          };
+          animate();
+        });
+        bubblesAndFishStarted.current = true;
+      }
+
+      return () => {
+      };
     }, [])
   );
 
@@ -291,34 +306,65 @@ const FishingJournalScreen = () => {
   };
 
   return (
-    <AnimatedImageBackground
-      source={require('../assets/encyclopedia_background.png')}
-      style={[styles.background, { transform: [{ scale: backgroundScale }] }]}
-      resizeMode="cover"
-    >
+    <View style={styles.fullScreenContainer}>
       {}
-      <View style={StyleSheet.absoluteFill}>
+      <AnimatedImageBackground
+        source={require('../assets/encyclopedia_background.png')}
+        style={[styles.background, { transform: [{ scale: backgroundScale }], zIndex: -2 }]}
+        resizeMode="cover"
+      />
+
+      {}
+      <View
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      >
         {bubbleAnims.map((bubble, i) => (
           <Animated.Image
-            key={i}
+            key={`bubble-${i}`}
             source={require('../assets/bubble.png')}
-            style={[
-              {
-                position: 'absolute',
-                left: bubble.left,
-                width: bubble.baseSize,
-                height: bubble.baseSize,
-                opacity: bubble.opacity,
-                transform: [{ translateY: bubble.y }, { scale: bubble.scale }],
-              },
-            ]}
+            style={{
+              position: 'absolute',
+              left: bubble.left,
+              width: bubble.baseSize,
+              height: bubble.baseSize,
+              opacity: bubble.opacity,
+              transform: [{ translateY: bubble.y }, { scale: bubble.scale }],
+            }}
             resizeMode="contain"
           />
         ))}
-      </View>
 
-      {}
-      {}
+        {floatingFish.map((fish) => {
+          const source =
+            fish.type === 'purple'
+              ? require('../assets/purple_fish.png')
+              : fish.type === 'blue'
+                ? require('../assets/blue_fish.png')
+                : require('../assets/yellow_fish.png');
+
+          const scaleSize =
+            fish.size === 'small' ? 0.5 : fish.size === 'medium' ? 0.8 : 1.1;
+
+          return (
+            <Animated.Image
+              key={fish.key}
+              source={source}
+              style={{
+                position: 'absolute',
+                width: 100 * scaleSize,
+                height: 60 * scaleSize,
+                transform: [{ translateX: fish.x }, { translateY: fish.y }],
+                opacity: 0.6,
+              }}
+              resizeMode="contain"
+            />
+          );
+        })}
+      </View>
 
       {}
       {formVisible && (
@@ -343,7 +389,6 @@ const FishingJournalScreen = () => {
                 <View style={{ width: 30 }} />
               </View>
 
-              {}
               <Pressable onPress={showDatepickerModal} style={styles.input}>
                 <Text style={date ? styles.inputText : styles.placeholderText}>
                   {date || 'Date'}
@@ -393,9 +438,7 @@ const FishingJournalScreen = () => {
 
           <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
             {entries.length === 0 ? (
-              <Text style={styles.noData}>
-                No saved entries yet.
-              </Text>
+              <Text style={styles.noData}>No saved entries yet.</Text>
             ) : (
               <View style={{ marginTop: 30 }}>
                 {entries.map((item, index) => (
@@ -413,24 +456,27 @@ const FishingJournalScreen = () => {
             )}
           </ScrollView>
 
-          {}
           <Pressable style={styles.newEntryButton} onPress={() => setFormVisible(true)}>
             <Text style={styles.newEntryText}>New entry</Text>
           </Pressable>
         </View>
       )}
-    </AnimatedImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
+  fullScreenContainer: {
     flex: 1,
+  },
+  background: {
+    ...StyleSheet.absoluteFillObject, 
   },
   container: {
     flex: 1,
     paddingTop: 80,
     paddingHorizontal: 20,
+    zIndex: 0, 
   },
   title: {
     fontSize: 36,
@@ -463,8 +509,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   formContainer: {
-    ...StyleSheet.absoluteFillObject, 
+    ...StyleSheet.absoluteFillObject,
     zIndex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
   },
   formContentContainer: {
     padding: 20,

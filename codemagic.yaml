@@ -10,7 +10,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.sdishcra.ftdfdfales
       vars:
-        APP_STORE_APPLE_ID: 6748670453 #change
+        APP_STORE_APPLE_ID: 6748670453 
         BUNDLE_ID: 'com.sdishcra.ftdfdfales'
         XCODE_WORKSPACE: 'FishcraftTales.xcworkspace'
         XCODE_SCHEME: 'FishcraftTales'
